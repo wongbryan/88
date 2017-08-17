@@ -178,7 +178,6 @@ function init() {
 
 		var data = analyser.getAverageFrequency();
 		var speed;
-		console.log(data);
 
 		if (data < 80){
 			speed = .5;
