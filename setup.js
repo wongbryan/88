@@ -8,7 +8,7 @@ var eight;
 var ground;
 var shapes = [];
 
-var ball;
+var analyser;
 
 var SCROLL_SPEED = .001;
 
@@ -28,7 +28,9 @@ function init() {
 		renderer.setClearColor(0xededed);
 		container.appendChild( renderer.domElement );
 		
+		var listener = new THREE.AudioListener();
 		camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, .001, 10000 );
+		camera.add(listener);
 		camera.position.set(0, 0, 10);
 		// controls = new THREE.TrackballControls(camera, renderer.domElement);
 		// controls.rotateSpeed = 2.0;
@@ -38,6 +40,16 @@ function init() {
 		controls.zoomSpeed = 4.0;
 		// controls = new THREE.FirstPersonControls(camera, renderer.domElement);
 		// controls.moveSpeed = 1.0;
+
+		var audioLoader = new THREE.AudioLoader();
+		sound = new THREE.PositionalAudio(listener);
+		audioLoader.load('assets/glow-like-dat.mp3', function(buffer){
+			sound.setBuffer(buffer);
+			sound.setRefDistance(2);
+			sound.play();
+		});
+
+		analyser = new THREE.AudioAnalyser(sound, 32);
 
 		scene = new THREE.Scene();
 
@@ -86,20 +98,25 @@ function init() {
 			eight.scale.set(3, 3, 3);
 			eight.rotation.x = -Math.PI/2;
 			eight.position.y += .5;
+			eight.add(sound);
 			scene.add(eight);
+
+			eightLoaded = true;
 		})
 
 		/* TERRAIN */
 
 		ground = new THREE.Group();
 
-		var texture = new THREE.TextureLoader().load('assets/glow-like-dat-texture.png');
+		var texture = new THREE.TextureLoader().load('assets/rain.jpg');
 		texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
 		var geom = new THREE.PlaneGeometry(1, 1, 128, 128);
 		var shapeMat = new THREE.ShaderMaterial({
+			// transparent: true,
 			uniforms : {
 				time : { value : 0. },
-				texture : { value : videoTexture}
+				texture : { value : texture},
+				bumpValue : { value : 0.}
 			},
 			side : THREE.DoubleSide,
 			// depthTest: false,
@@ -135,7 +152,31 @@ function init() {
 				shapes[i].position.y = 11;
 			shapes[i].position.y -= SCROLL_SPEED;
 		}
-		
+
+		if (!eight)
+			return;
+		if(eight.position.z >= camera.position.z)
+			eight.position.z = 0;
+		eight.position.z += SCROLL_SPEED*10.;
+
+		/*HANDLE AUDIO*/
+		updateAudioData();
+	}
+
+	function updateAudioData(){
+		if (analyser)
+
+		var data = analyser.getAverageFrequency();
+		var bumpVal;
+		console.log(data);
+
+		if (data < 120){
+			bumpVal = data/50000;
+		}
+		else{
+			bumpVal = data/5000;
+		}
+		shapes[0].material.uniforms.bumpValue.value = bumpVal;
 	}
 
 	function animate(){
