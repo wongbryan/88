@@ -69,12 +69,19 @@ function init() {
 		/* 88 */
 
 		var video = document.createElement('video');
+		video.mute = true;
 		video.src = 'assets/glow-like-dat.mp4';
+		// video.width = 512;
+		// video.height = 256;
 
 		var videoTexture = new THREE.VideoTexture(video);
+		// videoTexture.wrapS = videoTexture.wrapT = THREE.RepeatWrapping;
 		videoTexture.minFilter = THREE.LinearFilter;
 		videoTexture.magFilter = THREE.LinearFilter;
 		videoTexture.format = THREE.RGBFormat;
+
+		var flowerTexture = new THREE.TextureLoader().load('assets/glow-like-dat-texture.png');
+		flowerTexture.wrapS = flowerTexture.wrapT = THREE.RepeatWrapping;
 
 		var fontLoader = new THREE.FontLoader();
 		fontLoader.load(
@@ -90,19 +97,24 @@ function init() {
 			geom.center();
 
 			var mat = new THREE.ShaderMaterial({
+				uniforms : {
+					texture : { value : flowerTexture },
+					time : { value : 0.0 },
+					speed : { value : 1.0 }
+				},
 				vertexShader : document.getElementById('eightVertex').textContent,
 				fragmentShader : document.getElementById('eightFragment').textContent
 			});
 
 			eight = new THREE.Mesh(geom, mat);
-			eight.scale.set(3, 3, 3);
-			eight.rotation.x = -Math.PI/2;
-			eight.position.y += .5;
+			eight.scale.set(.75, .75, .75);
+			// eight.rotation.x = -Math.PI/2;
+			eight.position.set(0, .5, 8);
 			eight.add(sound);
 			scene.add(eight);
 
-			eightLoaded = true;
-		})
+			// video.play();
+		});
 
 		/* TERRAIN */
 
@@ -155,9 +167,7 @@ function init() {
 
 		if (!eight)
 			return;
-		if(eight.position.z >= camera.position.z)
-			eight.position.z = 0;
-		eight.position.z += SCROLL_SPEED*10.;
+		eight.material.uniforms.time.value += .005;
 
 		/*HANDLE AUDIO*/
 		updateAudioData();
@@ -167,16 +177,23 @@ function init() {
 		if (analyser)
 
 		var data = analyser.getAverageFrequency();
-		var bumpVal;
+		var speed;
 		console.log(data);
 
-		if (data < 120){
-			bumpVal = data/50000;
+		if (data < 80){
+			speed = .5;
+			SCROLL_SPEED = .001;
+		}
+		else if (data < 100){
+			speed = 2.;
+		}
+		else if (data < 140){
+			speed = 2.5;
 		}
 		else{
-			bumpVal = data/5000;
+			speed = 3;
 		}
-		shapes[0].material.uniforms.bumpValue.value = bumpVal;
+		eight.material.uniforms.speed.value = speed;
 	}
 
 	function animate(){
