@@ -37,7 +37,7 @@ function init() {
 		// controls.panSpeed = 0.8;
 		// controls.zoomSpeed = 1.5;
 		controls = new THREE.OrbitControls(camera, renderer.domElement);
-		controls.zoomSpeed = 4.0;
+		// controls.zoomSpeed = 4.0;
 		// controls = new THREE.FirstPersonControls(camera, renderer.domElement);
 		// controls.moveSpeed = 1.0;
 
@@ -46,7 +46,7 @@ function init() {
 		audioLoader.load('assets/glow-like-dat.mp3', function(buffer){
 			sound.setBuffer(buffer);
 			sound.setRefDistance(2);
-			sound.play();
+			// sound.play();
 		});
 
 		analyser = new THREE.AudioAnalyser(sound, 32);
@@ -68,17 +68,17 @@ function init() {
 
 		/* 88 */
 
-		var video = document.createElement('video');
-		video.mute = true;
-		video.src = 'assets/glow-like-dat.mp4';
-		// video.width = 512;
-		// video.height = 256;
+		// var video = document.createElement('video');
+		// video.mute = true;
+		// video.src = 'assets/glow-like-dat.mp4';
+		// // video.width = 512;
+		// // video.height = 256;
 
-		var videoTexture = new THREE.VideoTexture(video);
-		// videoTexture.wrapS = videoTexture.wrapT = THREE.RepeatWrapping;
-		videoTexture.minFilter = THREE.LinearFilter;
-		videoTexture.magFilter = THREE.LinearFilter;
-		videoTexture.format = THREE.RGBFormat;
+		// var videoTexture = new THREE.VideoTexture(video);
+		// // videoTexture.wrapS = videoTexture.wrapT = THREE.RepeatWrapping;
+		// videoTexture.minFilter = THREE.LinearFilter;
+		// videoTexture.magFilter = THREE.LinearFilter;
+		// videoTexture.format = THREE.RGBFormat;
 
 		var flowerTexture = new THREE.TextureLoader().load('assets/glow-like-dat-texture.png');
 		flowerTexture.wrapS = flowerTexture.wrapT = THREE.RepeatWrapping;
@@ -137,7 +137,7 @@ function init() {
 		});
 
 		var s = 12;
-		for (var i=-1; i<2; i++){
+		for (var i=-1; i<1; i++){
 			var shape = new THREE.Mesh(geom, shapeMat);
 			shape.scale.set(s, s, s);
 			shape.rotation.z = i*Math.PI/2;
@@ -147,7 +147,7 @@ function init() {
 			// scene.add(shape);
 		}
 
-		ground.rotation.x = -Math.PI/2.055;
+		ground.rotation.x = -Math.PI/2.045;
 
 		scene.add(ground);
 
@@ -170,7 +170,7 @@ function init() {
 		eight.material.uniforms.time.value += .005;
 
 		/*HANDLE AUDIO*/
-		updateAudioData();
+		// updateAudioData();
 	}
 
 	function updateAudioData(){
@@ -192,7 +192,7 @@ function init() {
 		else{
 			speed = 3;
 		}
-		eight.material.uniforms.speed.value = speed;
+		// eight.material.uniforms.speed.value = speed;
 	}
 
 	function animate(){
