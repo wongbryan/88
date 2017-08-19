@@ -1,3 +1,5 @@
+var SCREEN_WIDTH = window.innerWidth, SCREEN_HEIGHT = window.innerHeight;
+
 var camera, scene, renderer, controls, gui;
 var angle = 0;
 var clock = new THREE.Clock();
@@ -6,11 +8,28 @@ var time; var startTime = new Date().getTime();
 var box;
 var eight;
 var ground;
+var terrain;
 var shapes = [];
 
 var analyser;
 
 var SCROLL_SPEED = .001;
+
+/*RENDER TARGET SCENE*/
+var sceneRenderTarget, cameraOrtho;
+var quadTarget;
+
+/*UNIFORMS*/
+var uniformsNoise, uniformsNormal, uniformsTerrain;
+
+/*MAPS*/
+var heightMap, normalMap;
+
+/*SHADERS*/
+var normalShader, terrainShader; //note: noise shader in init loop
+
+/*MATERIAL LIBRARY TO ACCESS MATS FOR TERRAIN, NORMAL MAP, HEIGHT MAP*/
+var materialLibrary = {}; 
 
 function resize(){
 	camera.aspect = window.innerWidth / window.innerHeight;
@@ -68,17 +87,99 @@ function init() {
 
 		/* 88 */
 
-		// var video = document.createElement('video');
-		// video.mute = true;
-		// video.src = 'assets/glow-like-dat.mp4';
-		// // video.width = 512;
-		// // video.height = 256;
+		/*RENDER HEIGHT MAP/NORMAL MAP TO A TARGET*/
+		var rx = 256, ry = 256;
+		var pars = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBFormat };
+		
+		heightMap = new THREE.WebGLRenderTarget(rx, ry, pars);
+		heightMap.texture.generateMipMaps = false;
 
-		// var videoTexture = new THREE.VideoTexture(video);
-		// // videoTexture.wrapS = videoTexture.wrapT = THREE.RepeatWrapping;
-		// videoTexture.minFilter = THREE.LinearFilter;
-		// videoTexture.magFilter = THREE.LinearFilter;
-		// videoTexture.format = THREE.RGBFormat;
+		normalMap = new THREE.WebGLRenderTarget(rx, ry, pars);
+		normalMap.texture.generateMipMaps = false;
+
+		uniformsNoise = {
+			time : { value : 1.0 }
+		};
+
+		var genericVertexShader = document.getElementById('genericVertexShader').textContent;
+		var noiseFragmentShader = document.getElementById('noiseFragmentShader').textContent;
+
+		/*NORMAL SHADER*/
+		normalShader = THREE.NormalMapShader;
+		uniformsNormal = THREE.UniformsUtils.clone(normalShader.uniforms);
+		uniformsNormal['heightMap'].value = heightMap.texture; //normal shader takes in our generated height map texture
+
+		/*LOAD TEXTURES*/
+		var textureLoader = new THREE.TextureLoader();
+
+		var diffuseTexture1 = textureLoader.load( "assets/grasslight-big.jpg");
+		var diffuseTexture2 = textureLoader.load( "assets/backgrounddetailed6.jpg" );
+		var detailTexture = textureLoader.load( "assets/grasslight-big-nm.jpg" );
+		diffuseTexture1.wrapS = diffuseTexture1.wrapT = THREE.RepeatWrapping;
+		diffuseTexture2.wrapS = diffuseTexture2.wrapT = THREE.RepeatWrapping;
+		detailTexture.wrapS = detailTexture.wrapT = THREE.RepeatWrapping;
+
+		/*TERRAIN SHADER*/
+		terrainShader = THREE.ShaderTerrain.terrain;
+
+		uniformsTerrain = THREE.UniformsUtils.clone(terrainShader.uniforms);
+
+		//Need displacement and normals. Get texture from render targets instead of an image
+		uniformsTerrain[ 'tNormal' ].value = normalMap.texture;
+		uniformsTerrain[ 'uNormalScale' ].value = 3.5;
+		uniformsTerrain[ 'tDisplacement' ].value = heightMap.texture;
+		uniformsTerrain[ 'uDisplacementScale' ].value = 375;
+		uniformsTerrain[ 'uRepeatOverlay' ].value.set( 6, 6 );
+
+		uniformsTerrain[ 'tDiffuse1' ].value = diffuseTexture1;
+		uniformsTerrain[ 'tDiffuse2' ].value = diffuseTexture2;
+		uniformsTerrain[ 'tDetail' ].value = detailTexture;
+
+		uniformsTerrain[ 'enableDiffuse1' ].value = true;
+		uniformsTerrain[ 'enableDiffuse2' ].value = true;
+
+		uniformsTerrain[ 'diffuse' ].value.setHex( 0xffffff );
+		uniformsTerrain[ 'shininess' ].value = 30;
+
+		/*CREATE AN ARRAY OF RENDER PROGRAMS*/
+		var params = [	
+			['heightMap', noiseFragmentShader, genericVertexShader, uniformsNoise, false],
+			['normalMap', normalShader.fragmentShader, normalShader.vertexShader, uniformsNormal, false],
+			['terrain', terrainShader.fragmentShader, terrainShader.vertexShader, uniformsTerrain, true]
+		];
+
+		for (var i=0; i<params.length; i++){
+			var material = new THREE.ShaderMaterial({
+				uniforms : params[i][3],
+				vertexShader : params[i][2],
+				fragmentShader : params[i][1],
+				lights : params[i][4]
+			});
+
+			materialLibrary[ params[i][0] ] = material;
+		}
+
+		/*CREATE SCENE FOR RENDER TARGETS*/
+
+		sceneRenderTarget = new THREE.Scene();
+		cameraOrtho = new THREE.OrthographicCamera( SCREEN_WIDTH / - 2, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, SCREEN_HEIGHT / - 2, -1000, 1000 );
+		sceneRenderTarget.add(cameraOrtho);
+		// cameraOrtho.position.z = 100;
+
+		var plane = new THREE.PlaneBufferGeometry( SCREEN_WIDTH, SCREEN_HEIGHT );
+		quadTarget = new THREE.Mesh( plane, new THREE.MeshBasicMaterial( { color: 0x000000 } ) );
+		quadTarget.position.z = 0;
+		sceneRenderTarget.add( quadTarget );
+		// scene.add(quadTarget);
+
+		/*CREATE TERRAIN*/
+
+		var terrainGeom = new THREE.PlaneBufferGeometry(6000, 6000, 256, 256);
+		THREE.BufferGeometryUtils.computeTangents(terrainGeom);
+
+		terrain = new THREE.Mesh(terrainGeom, materialLibrary['terrain']);
+		terrain.rotation.x = 3*Math.PI/2;
+		scene.add(terrain);
 
 		var flowerTexture = new THREE.TextureLoader().load('assets/glow-like-dat-texture.png');
 		flowerTexture.wrapS = flowerTexture.wrapT = THREE.RepeatWrapping;
@@ -111,45 +212,45 @@ function init() {
 			// eight.rotation.x = -Math.PI/2;
 			eight.position.set(0, .5, 8);
 			eight.add(sound);
-			scene.add(eight);
+			// scene.add(eight);
 
 			// video.play();
 		});
 
-		/* TERRAIN */
+		// /* TERRAIN */
 
-		ground = new THREE.Group();
+		// ground = new THREE.Group();
 
-		var texture = new THREE.TextureLoader().load('assets/rain.jpg');
-		texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-		var geom = new THREE.PlaneGeometry(1, 1, 128, 128);
-		var shapeMat = new THREE.ShaderMaterial({
-			// transparent: true,
-			uniforms : {
-				time : { value : 0. },
-				texture : { value : texture},
-				bumpValue : { value : 0.}
-			},
-			side : THREE.DoubleSide,
-			// depthTest: false,
-			vertexShader : document.getElementById('vertexShader').textContent,
-			fragmentShader : document.getElementById('fragmentShader').textContent
-		});
+		// var texture = new THREE.TextureLoader().load('assets/rain.jpg');
+		// texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+		// var geom = new THREE.PlaneGeometry(1, 1, 128, 128);
+		// var shapeMat = new THREE.ShaderMaterial({
+		// 	// transparent: true,
+		// 	uniforms : {
+		// 		time : { value : 0. },
+		// 		texture : { value : texture},
+		// 		bumpValue : { value : 0.}
+		// 	},
+		// 	side : THREE.DoubleSide,
+		// 	// depthTest: false,
+		// 	vertexShader : document.getElementById('vertexShader').textContent,
+		// 	fragmentShader : document.getElementById('fragmentShader').textContent
+		// });
 
-		var s = 12;
-		for (var i=-1; i<1; i++){
-			var shape = new THREE.Mesh(geom, shapeMat);
-			shape.scale.set(s, s, s);
-			shape.rotation.z = i*Math.PI/2;
-			shape.position.set(0, i*(s - 1), 0);
-			ground.add(shape);
-			shapes.push(shape);
-			// scene.add(shape);
-		}
+		// var s = 12;
+		// for (var i=-1; i<1; i++){
+		// 	var shape = new THREE.Mesh(geom, shapeMat);
+		// 	shape.scale.set(s, s, s);
+		// 	shape.rotation.z = i*Math.PI/2;
+		// 	shape.position.set(0, i*(s - 1), 0);
+		// 	ground.add(shape);
+		// 	shapes.push(shape);
+		// 	// scene.add(shape);
+		// }
 
-		ground.rotation.x = -Math.PI/2.045;
+		// ground.rotation.x = -Math.PI/2.045;
 
-		scene.add(ground);
+		// // scene.add(ground);
 
 		window.addEventListener('resize', resize);
 	}
@@ -197,6 +298,13 @@ function init() {
 
 	function animate(){
 		update();
+
+		quadTarget.material = materialLibrary['heightMap'];
+		renderer.render(sceneRenderTarget, cameraOrtho, heightMap, true);
+
+		quadTarget.material = materialLibrary['normalMap'];
+		renderer.render(sceneRenderTarget, cameraOrtho, normalMap, true);
+
 		renderer.render(scene, camera);
 		window.requestAnimationFrame(animate);
 	}
