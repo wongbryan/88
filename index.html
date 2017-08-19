@@ -133,6 +133,7 @@
 </script>
 <script type="fsh" id="eightFragment">
 	uniform sampler2D texture;
+	uniform sampler2D noiseTexture; //read in from heightMap... rendered to different target
 	uniform float time;
 
 	varying vec2 vUv;
@@ -202,9 +203,9 @@
 	  }
 
 	void main(){
-		float p = pattern(pos.xy);
+		float p = texture2D(noiseTexture, vUv).r;
 
-		vec4 color = texture2D(texture, vUv + p/5.);
+		vec4 color = texture2D(texture, vUv + p/2.);
 		gl_FragColor = color;
 		// gl_FragColor = vec4(1., 0., 0., 1.);
 	}

@@ -200,6 +200,7 @@ function init() {
 			var mat = new THREE.ShaderMaterial({
 				uniforms : {
 					texture : { value : flowerTexture },
+					noiseTexture : { value : heightMap },
 					time : { value : 0.0 },
 					speed : { value : 1.0 }
 				},
@@ -212,7 +213,7 @@ function init() {
 			// eight.rotation.x = -Math.PI/2;
 			eight.position.set(0, .5, 8);
 			eight.add(sound);
-			// scene.add(eight);
+			scene.add(eight);
 
 			// video.play();
 		});
