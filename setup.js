@@ -153,7 +153,8 @@ function init() {
 				uniforms : params[i][3],
 				vertexShader : params[i][2],
 				fragmentShader : params[i][1],
-				lights : params[i][4]
+				lights : params[i][4],
+				fog : true
 			});
 
 			materialLibrary[ params[i][0] ] = material;
@@ -200,9 +201,11 @@ function init() {
 			var mat = new THREE.ShaderMaterial({
 				uniforms : {
 					texture : { value : flowerTexture },
-					noiseTexture : { value : heightMap },
+					noiseTexture : { value : heightMap.texture },
 					time : { value : 0.0 },
-					speed : { value : 1.0 }
+					speed : { value : 1.0 },
+					light : true,
+					fog : true
 				},
 				vertexShader : document.getElementById('eightVertex').textContent,
 				fragmentShader : document.getElementById('eightFragment').textContent
