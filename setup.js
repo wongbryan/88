@@ -145,6 +145,16 @@ function init() {
 			video.play();
 		});
 
+		var groundUniforms = {
+
+		};
+		var planeGeom = new THREE.PlaneGeometry(200, 200, 64, 64);
+		var planeMat = new THREE.ShaderMaterial({
+			vertexShader : document.getElementById('groundVertex').textContent,
+			fragmentShader : document.getElementById('groundFragment').textContent,
+			uniforms : groundUniforms
+		});
+
 		window.addEventListener('resize', resize);
 	}
 
