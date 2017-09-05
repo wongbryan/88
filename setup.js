@@ -89,16 +89,45 @@ function init() {
 
 			function(font){
 
-			var geom = new THREE.TextGeometry('88', {
+			var geometry = new THREE.TextGeometry('88', {
 				font : font,
 				size : 1,
 				height : .25
 			});
-			geom.center();
+			geometry.center();
+
+			/* ASSIGN UVs */
+
+			geometry.computeBoundingBox();
+
+		    var max     = geometry.boundingBox.max;
+		    var min     = geometry.boundingBox.min;
+
+		    var offset  = new THREE.Vector2(0 - min.x, 0 - min.y);
+		    var range   = new THREE.Vector2(max.x - min.x, max.y - min.y);
+
+		    geometry.faceVertexUvs[0] = [];
+		    var faces = geometry.faces;
+
+		    for (i = 0; i < geometry.faces.length ; i++) {
+
+		      var v1 = geometry.vertices[faces[i].a];
+		      var v2 = geometry.vertices[faces[i].b];
+		      var v3 = geometry.vertices[faces[i].c];
+
+		      geometry.faceVertexUvs[0].push([
+		        new THREE.Vector2( ( v1.x + offset.x ) / range.x , ( v1.y + offset.y ) / range.y ),
+		        new THREE.Vector2( ( v2.x + offset.x ) / range.x , ( v2.y + offset.y ) / range.y ),
+		        new THREE.Vector2( ( v3.x + offset.x ) / range.x , ( v3.y + offset.y ) / range.y )
+		      ]);
+
+		    }
+
+		    geometry.uvsNeedUpdate = true;
 
 			var mat = new THREE.ShaderMaterial({
 				uniforms : {
-					texture : { value : flowerTexture },
+					texture : { value : videoTexture },
 					time : { value : 0.0 },
 					speed : { value : 1.0 }
 				},
@@ -106,50 +135,15 @@ function init() {
 				fragmentShader : document.getElementById('eightFragment').textContent
 			});
 
-			eight = new THREE.Mesh(geom, mat);
-			eight.scale.set(.75, .75, .75);
+			eight = new THREE.Mesh(geometry, mat);
+			eight.scale.set(10, 10, 10);
 			// eight.rotation.x = -Math.PI/2;
-			eight.position.set(0, .5, 8);
+			eight.position.set(0, 0, 0);
 			eight.add(sound);
 			scene.add(eight);
 
-			// video.play();
+			video.play();
 		});
-
-		/* TERRAIN */
-
-		ground = new THREE.Group();
-
-		var texture = new THREE.TextureLoader().load('assets/rain.jpg');
-		texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-		var geom = new THREE.PlaneGeometry(1, 1, 128, 128);
-		var shapeMat = new THREE.ShaderMaterial({
-			// transparent: true,
-			uniforms : {
-				time : { value : 0. },
-				texture : { value : texture},
-				bumpValue : { value : 0.}
-			},
-			side : THREE.DoubleSide,
-			// depthTest: false,
-			vertexShader : document.getElementById('vertexShader').textContent,
-			fragmentShader : document.getElementById('fragmentShader').textContent
-		});
-
-		var s = 12;
-		for (var i=-1; i<2; i++){
-			var shape = new THREE.Mesh(geom, shapeMat);
-			shape.scale.set(s, s, s);
-			shape.rotation.z = i*Math.PI/2;
-			shape.position.set(0, i*(s - 1), 0);
-			ground.add(shape);
-			shapes.push(shape);
-			// scene.add(shape);
-		}
-
-		ground.rotation.x = -Math.PI/2.055;
-
-		scene.add(ground);
 
 		window.addEventListener('resize', resize);
 	}
